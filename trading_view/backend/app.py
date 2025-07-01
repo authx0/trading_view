@@ -5,15 +5,28 @@ import uuid
 from datetime import datetime, timedelta
 import random
 import math
+import time
+import threading
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}})
+# FIX 1: CORS Security - Only allow specific origins instead of "*"
+CORS(app, resources={
+    r"/api/*": {
+        "origins": ["http://localhost:3000", "http://127.0.0.1:3000"],
+        "methods": ["GET", "POST", "PUT", "DELETE"],
+        "allow_headers": ["Content-Type", "Authorization"]
+    }
+})
 
 # In-memory storage (in production, use a database)
 users = {}
 portfolios = {}
 orders = {}
 stock_prices = {}
+
+# FIX 2: Performance - Add price update tracking
+last_price_update = 0
+PRICE_UPDATE_INTERVAL = 30  # Update prices every 30 seconds
 
 # Sample stocks for paper trading
 SAMPLE_STOCKS = {
@@ -41,21 +54,36 @@ def simulate_price_change(symbol, current_price):
 
 def update_stock_prices():
     """Update all stock prices with simulated changes"""
+    global last_price_update
+    current_time = time.time()
+    
+    # FIX 2: Performance - Only update prices if enough time has passed
+    if current_time - last_price_update < PRICE_UPDATE_INTERVAL:
+        return
+    
     for symbol, data in SAMPLE_STOCKS.items():
         data['current_price'] = simulate_price_change(symbol, data['current_price'])
         stock_prices[symbol] = data['current_price']
+    
+    last_price_update = current_time
 
 def get_option_price(stock_price, strike_price, days_to_expiry, option_type='call'):
     """Calculate option price using Black-Scholes approximation"""
-    # Simplified option pricing
-    time_value = max(0, stock_price - strike_price) if option_type == 'call' else max(0, strike_price - stock_price)
-    time_decay = max(0.01, days_to_expiry / 365)  # Time value
-    volatility_factor = stock_price * 0.1 * time_decay  # Simplified volatility
+    # FIX 3: Logic Error - Correct options pricing for calls vs puts
+    time_decay = max(0.01, days_to_expiry / 365)  # Time value factor
+    volatility_factor = stock_price * 0.1 * math.sqrt(time_decay)  # Volatility component
     
     if option_type == 'call':
-        return round(max(time_value + volatility_factor, 0.01), 2)
-    else:
-        return round(max(time_value + volatility_factor, 0.01), 2)
+        # Call option: value increases when stock price > strike price
+        intrinsic_value = max(0, stock_price - strike_price)
+        time_value = volatility_factor * (1 + (stock_price / strike_price - 1) * 0.5)
+    else:  # put option
+        # Put option: value increases when stock price < strike price
+        intrinsic_value = max(0, strike_price - stock_price)
+        time_value = volatility_factor * (1 + (strike_price / stock_price - 1) * 0.5)
+    
+    option_price = intrinsic_value + time_value
+    return round(max(option_price, 0.01), 2)
 
 @app.route('/api/hello')
 def hello():
@@ -93,7 +121,8 @@ def register_user():
 @app.route('/api/paper-trading/stocks', methods=['GET'])
 def get_stocks():
     """Get available stocks for trading"""
-    update_stock_prices()  # Simulate price changes
+    # FIX 2: Performance - Only update prices when needed (every 30 seconds)
+    update_stock_prices()
     return jsonify({
         'stocks': SAMPLE_STOCKS,
         'timestamp': datetime.now().isoformat()
