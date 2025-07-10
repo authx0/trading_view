@@ -81,6 +81,10 @@ const MainContent: React.FC<MainContentProps> = ({
   const [successMessage, setSuccessMessage] = useState('');
   const [chartPeriod, setChartPeriod] = useState<'1D' | '1W' | '1M' | '1Y'>('1M');
   const [stockChartPeriod, setStockChartPeriod] = useState<'1D' | '1W' | '1M' | '1Y'>('1M');
+  const [marketData, setMarketData] = useState<any[]>([]);
+  const [marketDataLoading, setMarketDataLoading] = useState(false);
+  const [stockChartData, setStockChartData] = useState<any[]>([]);
+  const [stockChartLoading, setStockChartLoading] = useState(false);
 
   const drawerWidth = 300;
 
@@ -92,14 +96,40 @@ const MainContent: React.FC<MainContentProps> = ({
     }
   }, [selectedStock]);
 
-  // Regenerate market data when chart period changes
+  // Load market data when chart period changes
   useEffect(() => {
-    // This will trigger a re-render of the chart with new data
+    const loadMarketData = async () => {
+      setMarketDataLoading(true);
+      try {
+        const data = await generateMarketData();
+        setMarketData(data);
+      } catch (error) {
+        console.error('Error loading market data:', error);
+      } finally {
+        setMarketDataLoading(false);
+      }
+    };
+    
+    loadMarketData();
   }, [chartPeriod]);
 
-  // Regenerate stock chart data when stock chart period changes
+  // Load stock chart data when stock chart period changes
   useEffect(() => {
-    // This will trigger a re-render of the stock chart with new data
+    const loadStockChartData = async () => {
+      if (!selectedStock) return;
+      
+      setStockChartLoading(true);
+      try {
+        const data = await generateStockChartData();
+        setStockChartData(data);
+      } catch (error) {
+        console.error('Error loading stock chart data:', error);
+      } finally {
+        setStockChartLoading(false);
+      }
+    };
+    
+    loadStockChartData();
   }, [stockChartPeriod, selectedStock]);
 
   const loadChartData = async (symbol: string) => {
@@ -165,7 +195,63 @@ const MainContent: React.FC<MainContentProps> = ({
     }));
   };
 
-  const generateMarketData = () => {
+  const generateMarketData = async () => {
+    try {
+      // Fetch real S&P 500 data using Alpha Vantage API
+      const response = await fetch(`https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=SPY&apikey=demo&outputsize=compact`);
+      const data = await response.json();
+      
+      if (data['Time Series (Daily)']) {
+        const timeSeriesData = data['Time Series (Daily)'];
+        const dates = Object.keys(timeSeriesData).sort().reverse();
+        
+        let dataPoints = 30; // Default for 1M
+        switch (chartPeriod) {
+          case '1D':
+            dataPoints = 24;
+            break;
+          case '1W':
+            dataPoints = 7;
+            break;
+          case '1M':
+            dataPoints = 30;
+            break;
+          case '1Y':
+            dataPoints = 52;
+            break;
+        }
+        
+        const chartData = dates.slice(0, dataPoints).map((date, index) => {
+          const dayData = timeSeriesData[date];
+          const closePrice = parseFloat(dayData['4. close']);
+          
+          // Format date based on period
+          let dateLabel = '';
+          const dateObj = new Date(date);
+          
+          if (chartPeriod === '1D') {
+            dateLabel = dateObj.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+          } else if (chartPeriod === '1W') {
+            dateLabel = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
+          } else if (chartPeriod === '1Y') {
+            dateLabel = dateObj.toLocaleDateString('en-US', { month: 'short' });
+          } else {
+            dateLabel = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          }
+          
+          return {
+            date: dateLabel,
+            value: closePrice
+          };
+        });
+        
+        return chartData;
+      }
+    } catch (error) {
+      console.error('Error fetching market data:', error);
+    }
+    
+    // Fallback to mock data if API fails
     const data = [];
     const baseValue = 4780;
     const today = new Date();
@@ -228,9 +314,65 @@ const MainContent: React.FC<MainContentProps> = ({
     return data;
   };
 
-  const generateStockChartData = () => {
+  const generateStockChartData = async () => {
     if (!selectedStock) return [];
     
+    try {
+      // Fetch real stock data using Alpha Vantage API
+      const response = await fetch(`https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${selectedStock.symbol}&apikey=demo&outputsize=compact`);
+      const data = await response.json();
+      
+      if (data['Time Series (Daily)']) {
+        const timeSeriesData = data['Time Series (Daily)'];
+        const dates = Object.keys(timeSeriesData).sort().reverse();
+        
+        let dataPoints = 30; // Default for 1M
+        switch (stockChartPeriod) {
+          case '1D':
+            dataPoints = 24;
+            break;
+          case '1W':
+            dataPoints = 7;
+            break;
+          case '1M':
+            dataPoints = 30;
+            break;
+          case '1Y':
+            dataPoints = 52;
+            break;
+        }
+        
+        const chartData = dates.slice(0, dataPoints).map((date, index) => {
+          const dayData = timeSeriesData[date];
+          const closePrice = parseFloat(dayData['4. close']);
+          
+          // Format date based on period
+          let dateLabel = '';
+          const dateObj = new Date(date);
+          
+          if (stockChartPeriod === '1D') {
+            dateLabel = dateObj.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+          } else if (stockChartPeriod === '1W') {
+            dateLabel = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
+          } else if (stockChartPeriod === '1Y') {
+            dateLabel = dateObj.toLocaleDateString('en-US', { month: 'short' });
+          } else {
+            dateLabel = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          }
+          
+          return {
+            date: dateLabel,
+            close: closePrice
+          };
+        });
+        
+        return chartData;
+      }
+    } catch (error) {
+      console.error('Error fetching stock data:', error);
+    }
+    
+    // Fallback to mock data if API fails
     const data = [];
     const baseValue = selectedStock.price;
     const today = new Date();
@@ -442,13 +584,13 @@ const MainContent: React.FC<MainContentProps> = ({
                     ))}
                   </Box>
                 </Box>
-                {chartLoading ? (
+                {chartLoading || stockChartLoading ? (
                   <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 320 }}>
                     <CircularProgress sx={{ color: '#00d4aa' }} />
                   </Box>
-                ) : chartData.length > 0 ? (
+                ) : stockChartData.length > 0 ? (
                   <ResponsiveContainer width="100%" height={280}>
-                    <AreaChart data={generateStockChartData()}>
+                    <AreaChart data={stockChartData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
                       <XAxis 
                         dataKey="date" 
@@ -881,8 +1023,13 @@ const MainContent: React.FC<MainContentProps> = ({
                     ))}
                   </Box>
                 </Box>
-                <ResponsiveContainer width="100%" height={320}>
-                  <AreaChart data={generateMarketData()}>
+                {marketDataLoading ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 320 }}>
+                    <CircularProgress sx={{ color: '#00d4aa' }} />
+                  </Box>
+                ) : (
+                  <ResponsiveContainer width="100%" height={320}>
+                    <AreaChart data={marketData}>
                     <defs>
                       <linearGradient id="marketGradient" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#00d4aa" stopOpacity={0.3}/>
@@ -916,17 +1063,18 @@ const MainContent: React.FC<MainContentProps> = ({
                       formatter={(value: any) => [`${value.toFixed(2)}`, 'Index']}
                       labelFormatter={(label) => `Date: ${label}`}
                     />
-                    <Area
-                      type="monotone"
-                      dataKey="value"
-                      stroke="#00d4aa"
-                      fill="url(#marketGradient)"
-                      strokeWidth={chartPeriod === '1D' ? 2 : chartPeriod === '1W' ? 2.5 : 3}
-                      dot={chartPeriod === '1D' ? { r: 2, fill: '#00d4aa' } : false}
-                      activeDot={{ r: 6, fill: '#00d4aa', stroke: '#ffffff', strokeWidth: 2 }}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
+                                          <Area
+                        type="monotone"
+                        dataKey="value"
+                        stroke="#00d4aa"
+                        fill="url(#marketGradient)"
+                        strokeWidth={chartPeriod === '1D' ? 2 : chartPeriod === '1W' ? 2.5 : 3}
+                        dot={chartPeriod === '1D' ? { r: 2, fill: '#00d4aa' } : false}
+                        activeDot={{ r: 6, fill: '#00d4aa', stroke: '#ffffff', strokeWidth: 2 }}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                )}
               </Paper>
             </Box>
 

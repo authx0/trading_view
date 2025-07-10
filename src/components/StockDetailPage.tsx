@@ -79,74 +79,88 @@ const StockDetailPage: React.FC<StockDetailPageProps> = ({
   const [chartData, setChartData] = useState<ChartData[]>([]);
   const [timeframe, setTimeframe] = useState<'1D' | '1W' | '1M' | '3M' | '1Y'>('1M');
 
-  // Mock chart data for the selected stock
+  // Load real chart data for the selected stock
   useEffect(() => {
-    const generateChartData = () => {
-      const data: ChartData[] = [];
-      const basePrice = stock.price;
-      const now = new Date();
-      
-      let dataPoints = 30; // Default for 1M
-      let dateFormat: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
-      
-      switch (timeframe) {
-        case '1D':
-          dataPoints = 24; // 24 hours
-          dateFormat = { hour: 'numeric', minute: '2-digit' };
-          break;
-        case '1W':
-          dataPoints = 7; // 7 days
-          dateFormat = { weekday: 'short' };
-          break;
-        case '1M':
-          dataPoints = 30; // 30 days
-          dateFormat = { month: 'short', day: 'numeric' };
-          break;
-        case '3M':
-          dataPoints = 90; // 90 days
-          dateFormat = { month: 'short', day: 'numeric' };
-          break;
-        case '1Y':
-          dataPoints = 52; // 52 weeks (weekly data points)
-          dateFormat = { month: 'short' };
-          break;
-      }
-      
-      for (let i = dataPoints - 1; i >= 0; i--) {
-        const date = new Date(now);
+    const loadChartData = async () => {
+      try {
+        // Fetch real stock data using Alpha Vantage API
+        const response = await fetch(`https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${stock.symbol}&apikey=demo&outputsize=compact`);
+        const data = await response.json();
         
-        if (timeframe === '1D') {
-          // For 1D, show hourly data
-          date.setHours(date.getHours() - i);
-        } else if (timeframe === '1Y') {
-          // For 1Y, show weekly data
-          date.setDate(date.getDate() - (i * 7));
-        } else {
-          // For other timeframes, show daily data
+        if (data['Time Series (Daily)']) {
+          const timeSeriesData = data['Time Series (Daily)'];
+          const dates = Object.keys(timeSeriesData).sort().reverse();
+          
+          let dataPoints = 30; // Default for 1M
+          switch (timeframe) {
+            case '1D':
+              dataPoints = 24;
+              break;
+            case '1W':
+              dataPoints = 7;
+              break;
+            case '1M':
+              dataPoints = 30;
+              break;
+            case '3M':
+              dataPoints = 90;
+              break;
+            case '1Y':
+              dataPoints = 52;
+              break;
+          }
+          
+          const chartData: ChartData[] = dates.slice(0, dataPoints).map((date, index) => {
+            const dayData = timeSeriesData[date];
+            const closePrice = parseFloat(dayData['4. close']);
+            const openPrice = parseFloat(dayData['1. open']);
+            const highPrice = parseFloat(dayData['2. high']);
+            const lowPrice = parseFloat(dayData['3. low']);
+            const volume = parseInt(dayData['5. volume']);
+            
+            return {
+              timestamp: new Date(date).getTime(),
+              open: openPrice,
+              high: highPrice,
+              low: lowPrice,
+              close: closePrice,
+              volume: volume,
+            };
+          });
+          
+          setChartData(chartData);
+        }
+      } catch (error) {
+        console.error('Error loading chart data:', error);
+        
+        // Fallback to mock data if API fails
+        const data: ChartData[] = [];
+        const basePrice = stock.price;
+        const now = new Date();
+        
+        for (let i = 30; i >= 0; i--) {
+          const date = new Date(now);
           date.setDate(date.getDate() - i);
+          
+          const randomChange = (Math.random() - 0.5) * 0.02; // ±1% daily change
+          const price = basePrice * (1 + randomChange);
+          
+          data.push({
+            timestamp: date.getTime(),
+            open: price * 0.998,
+            high: price * 1.005,
+            low: price * 0.995,
+            close: price,
+            volume: Math.floor(Math.random() * 50000000) + 20000000,
+          });
         }
         
-        // Generate realistic stock data with some volatility
-        const volatility = timeframe === '1D' ? basePrice * 0.02 : timeframe === '1W' ? basePrice * 0.05 : timeframe === '1M' ? basePrice * 0.1 : timeframe === '3M' ? basePrice * 0.15 : basePrice * 0.3;
-        const randomChange = (Math.random() - 0.5) * volatility;
-        const trend = Math.sin(i / (dataPoints / 10)) * (volatility / 3);
-        const price = basePrice + randomChange + trend;
-        
-        data.push({
-          timestamp: date.getTime(),
-          open: price * 0.998,
-          high: price * 1.005,
-          low: price * 0.995,
-          close: price,
-          volume: Math.floor(Math.random() * 50000000) + 20000000,
-        });
+        setChartData(data);
       }
-      
-      setChartData(data);
     };
 
-    generateChartData();
-  }, [stock.price, timeframe]);
+    loadChartData();
+  }, [stock.price, stock.symbol, timeframe]);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
