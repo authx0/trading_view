@@ -271,23 +271,23 @@ const Header: React.FC<HeaderProps> = ({
         borderBottom: '1px solid #1a1a1a'
       }}
     >
-      <Toolbar>
+      <Toolbar sx={{ px: { xs: 1, sm: 2 } }}>
         <IconButton
           color="inherit"
           aria-label="open drawer"
           edge="start"
           onClick={onMenuClick}
-          sx={{ mr: 2 }}
+          sx={{ mr: { xs: 1, sm: 2 } }}
         >
           <MenuIcon />
         </IconButton>
         
-        <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
+        <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, display: { xs: 'none', sm: 'block' } }}>
           Trading View
         </Typography>
 
         {selectedStock && (
-          <Box sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
+          <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', mr: 2 }}>
             <Typography variant="h6" sx={{ mr: 1 }}>
               {selectedStock.symbol}
             </Typography>
@@ -325,7 +325,7 @@ const Header: React.FC<HeaderProps> = ({
                 ),
               }}
               sx={{
-                width: 250,
+                width: { xs: 200, sm: 250 },
                 '& .MuiOutlinedInput-root': {
                   backgroundColor: isPopularStock ? '#00d4aa20' : '#1a1a1a',
                   borderRadius: 2,
@@ -359,7 +359,7 @@ const Header: React.FC<HeaderProps> = ({
               <ClickAwayListener onClickAway={handleSearchClose}>
                 <Paper 
                   sx={{ 
-                    width: 350, 
+                    width: { xs: 280, sm: 350 }, 
                     maxHeight: 400, 
                     overflow: 'auto',
                     backgroundColor: '#0a0a0a',

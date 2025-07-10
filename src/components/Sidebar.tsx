@@ -52,7 +52,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [portfolioOpen, setPortfolioOpen] = useState(true);
   const [marketOpen, setMarketOpen] = useState(true);
 
-  const drawerWidth = 300;
+  const drawerWidth = { xs: 280, sm: 300 };
 
   const handleStockClick = (stock: StockData) => {
     onStockSelect(stock);
@@ -74,6 +74,9 @@ const Sidebar: React.FC<SidebarProps> = ({
           borderRight: '1px solid #1a1a1a',
           marginTop: '64px',
           height: 'calc(100vh - 64px)',
+          '@media (max-width: 600px)': {
+            width: 280,
+          },
         },
       }}
     >

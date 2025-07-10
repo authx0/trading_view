@@ -171,29 +171,19 @@ const MainContent: React.FC<MainContentProps> = ({
     const today = new Date();
     
     let dataPoints = 30; // Default for 1M
-    let dateFormat: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
-    let timeStep = 1; // Days by default
     
     switch (chartPeriod) {
       case '1D':
         dataPoints = 24; // 24 hours
-        dateFormat = { hour: 'numeric', minute: '2-digit' };
-        timeStep = 1/24; // Hours
         break;
       case '1W':
         dataPoints = 7; // 7 days
-        dateFormat = { weekday: 'short' };
-        timeStep = 1; // Days
         break;
       case '1M':
         dataPoints = 30; // 30 days
-        dateFormat = { month: 'short', day: 'numeric' };
-        timeStep = 1; // Days
         break;
       case '1Y':
         dataPoints = 52; // 52 weeks (weekly data points)
-        dateFormat = { month: 'short' };
-        timeStep = 7; // Weeks
         break;
     }
     
@@ -217,8 +207,20 @@ const MainContent: React.FC<MainContentProps> = ({
       const trend = Math.sin(i / (dataPoints / 10)) * (volatility / 3);
       const value = baseValue + randomChange + trend;
       
+      // Format date based on period
+      let dateLabel = '';
+      if (chartPeriod === '1D') {
+        dateLabel = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      } else if (chartPeriod === '1W') {
+        dateLabel = date.toLocaleDateString('en-US', { weekday: 'short' });
+      } else if (chartPeriod === '1Y') {
+        dateLabel = date.toLocaleDateString('en-US', { month: 'short' });
+      } else {
+        dateLabel = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      }
+      
       data.push({
-        date: date.toLocaleDateString('en-US', dateFormat),
+        date: dateLabel,
         value: Math.max(4700, Math.min(4850, value)) // Keep within reasonable bounds
       });
     }
@@ -234,29 +236,19 @@ const MainContent: React.FC<MainContentProps> = ({
     const today = new Date();
     
     let dataPoints = 30; // Default for 1M
-    let dateFormat: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
-    let timeStep = 1; // Days by default
     
     switch (stockChartPeriod) {
       case '1D':
         dataPoints = 24; // 24 hours
-        dateFormat = { hour: 'numeric', minute: '2-digit' };
-        timeStep = 1/24; // Hours
         break;
       case '1W':
         dataPoints = 7; // 7 days
-        dateFormat = { weekday: 'short' };
-        timeStep = 1; // Days
         break;
       case '1M':
         dataPoints = 30; // 30 days
-        dateFormat = { month: 'short', day: 'numeric' };
-        timeStep = 1; // Days
         break;
       case '1Y':
         dataPoints = 52; // 52 weeks (weekly data points)
-        dateFormat = { month: 'short' };
-        timeStep = 7; // Weeks
         break;
     }
     
@@ -280,8 +272,20 @@ const MainContent: React.FC<MainContentProps> = ({
       const trend = Math.sin(i / (dataPoints / 10)) * (volatility / 3);
       const value = baseValue + randomChange + trend;
       
+      // Format date based on period
+      let dateLabel = '';
+      if (stockChartPeriod === '1D') {
+        dateLabel = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      } else if (stockChartPeriod === '1W') {
+        dateLabel = date.toLocaleDateString('en-US', { weekday: 'short' });
+      } else if (stockChartPeriod === '1Y') {
+        dateLabel = date.toLocaleDateString('en-US', { month: 'short' });
+      } else {
+        dateLabel = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      }
+      
       data.push({
-        date: date.toLocaleDateString('en-US', dateFormat),
+        date: dateLabel,
         close: Math.max(baseValue * 0.8, Math.min(baseValue * 1.2, value)) // Keep within reasonable bounds
       });
     }
@@ -406,10 +410,10 @@ const MainContent: React.FC<MainContentProps> = ({
             </Box>
           </Paper>
 
-          <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+          <Box sx={{ display: 'flex', gap: { xs: 2, sm: 3 }, flexWrap: 'wrap' }}>
             {/* Chart Section - Enhanced with functional data */}
             <Box sx={{ flex: '1 1 600px', minWidth: 0, width: '100%' }}>
-              <Paper sx={{ p: 3, backgroundColor: '#0a0a0a', height: 400, width: '100%' }}>
+              <Paper sx={{ p: { xs: 2, sm: 3 }, backgroundColor: '#0a0a0a', height: { xs: 300, sm: 400 }, width: '100%' }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                   <Typography variant="h6">
                     Price Chart - {selectedStock.symbol}
@@ -443,7 +447,7 @@ const MainContent: React.FC<MainContentProps> = ({
                     <CircularProgress sx={{ color: '#00d4aa' }} />
                   </Box>
                 ) : chartData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={320}>
+                  <ResponsiveContainer width="100%" height={280}>
                     <AreaChart data={generateStockChartData()}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
                       <XAxis 
@@ -494,7 +498,7 @@ const MainContent: React.FC<MainContentProps> = ({
 
             {/* Trading Panel - Working functionality */}
             <Box sx={{ flex: '1 1 350px', minWidth: 0 }}>
-              <Paper sx={{ p: 3, backgroundColor: '#0a0a0a', height: 400 }}>
+              <Paper sx={{ p: { xs: 2, sm: 3 }, backgroundColor: '#0a0a0a', height: { xs: 'auto', sm: 400 } }}>
                 <Typography variant="h6" sx={{ mb: 2 }}>
                   Trade
                 </Typography>
@@ -770,7 +774,7 @@ const MainContent: React.FC<MainContentProps> = ({
                 flex: '1 1 100%'
               }
             }}>
-              <Paper sx={{ p: 3, backgroundColor: '#0a0a0a' }}>
+              <Paper sx={{ p: { xs: 2, sm: 3 }, backgroundColor: '#0a0a0a' }}>
                 <Typography variant="h6" sx={{ mb: 2 }}>
                   <Newspaper sx={{ mr: 1, verticalAlign: 'middle' }} />
                   Latest News
@@ -848,7 +852,7 @@ const MainContent: React.FC<MainContentProps> = ({
           <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
             {/* Main Market Chart */}
             <Box sx={{ flex: '1 1 800px', minWidth: 0, width: '100%' }}>
-              <Paper sx={{ p: 3, backgroundColor: '#0a0a0a', height: 500, width: '100%' }}>
+              <Paper sx={{ p: { xs: 2, sm: 3 }, backgroundColor: '#0a0a0a', height: { xs: 350, sm: 500 }, width: '100%' }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                   <Typography variant="h6" sx={{ color: '#ffffff' }}>
                     Market Performance - S&P 500 Index
@@ -877,7 +881,7 @@ const MainContent: React.FC<MainContentProps> = ({
                     ))}
                   </Box>
                 </Box>
-                <ResponsiveContainer width="100%" height={420}>
+                <ResponsiveContainer width="100%" height={320}>
                   <AreaChart data={generateMarketData()}>
                     <defs>
                       <linearGradient id="marketGradient" x1="0" y1="0" x2="0" y2="1">
@@ -928,7 +932,7 @@ const MainContent: React.FC<MainContentProps> = ({
 
             {/* Market Stats */}
             <Box sx={{ flex: '1 1 350px', minWidth: 0 }}>
-              <Paper sx={{ p: 3, backgroundColor: '#0a0a0a', height: 500 }}>
+              <Paper sx={{ p: { xs: 2, sm: 3 }, backgroundColor: '#0a0a0a', height: { xs: 'auto', sm: 500 } }}>
                 <Typography variant="h6" sx={{ mb: 3, color: '#ffffff' }}>
                   Market Statistics
                 </Typography>
@@ -1003,7 +1007,7 @@ const MainContent: React.FC<MainContentProps> = ({
                 flex: '1 1 100%'
               }
             }}>
-              <Paper sx={{ p: 3, backgroundColor: '#0a0a0a', height: 500 }}>
+              <Paper sx={{ p: { xs: 2, sm: 3 }, backgroundColor: '#0a0a0a', height: { xs: 'auto', sm: 500 } }}>
                 <Typography variant="h6" sx={{ mb: 3, color: '#ffffff' }}>
                   Top Movers
                 </Typography>

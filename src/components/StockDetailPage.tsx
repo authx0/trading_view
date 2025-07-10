@@ -555,8 +555,8 @@ const StockDetailPage: React.FC<StockDetailPageProps> = ({
         </Box>
 
         {/* Chart */}
-        <Paper sx={{ p: 3, backgroundColor: '#0a0a0a', border: '1px solid #1a1a1a' }}>
-          <ResponsiveContainer width="100%" height={400}>
+        <Paper sx={{ p: { xs: 2, sm: 3 }, backgroundColor: '#0a0a0a', border: '1px solid #1a1a1a' }}>
+          <ResponsiveContainer width="100%" height={320}>
             <AreaChart data={chartData}>
               <defs>
                 <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
@@ -619,7 +619,7 @@ const StockDetailPage: React.FC<StockDetailPageProps> = ({
       </TabPanel>
 
       <TabPanel value={tabValue} index={1}>
-        <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+        <Box sx={{ display: 'flex', gap: { xs: 2, sm: 3 }, flexWrap: 'wrap' }}>
           <Box sx={{ flex: '1 1 400px', minWidth: 0 }}>
             <Card sx={{ backgroundColor: '#0a0a0a', border: '1px solid #1a1a1a' }}>
               <CardContent>
