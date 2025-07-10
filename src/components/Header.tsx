@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   AppBar,
   Toolbar,
@@ -13,7 +13,7 @@ import {
   MenuItem,
   List,
   ListItem,
-  ListItemText,
+
   Paper,
   Popper,
   ClickAwayListener,
@@ -54,7 +54,7 @@ const Header: React.FC<HeaderProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [searchAnchorEl, setSearchAnchorEl] = useState<null | HTMLElement>(null);
+
   const [searchOpen, setSearchOpen] = useState(false);
   const [isPopularStock, setIsPopularStock] = useState(false);
   const searchInputRef = React.useRef<HTMLInputElement>(null);

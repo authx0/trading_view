@@ -3,9 +3,7 @@ import {
   Box,
   Paper,
   Typography,
-  Grid,
-  Tabs,
-  Tab,
+
   Card,
   CardContent,
   Chip,
@@ -25,8 +23,7 @@ import {
   Newspaper,
 } from '@mui/icons-material';
 import {
-  LineChart,
-  Line,
+
   XAxis,
   YAxis,
   CartesianGrid,
@@ -35,7 +32,7 @@ import {
   AreaChart,
   Area,
 } from 'recharts';
-import { StockData, ChartData, NewsItem } from '../types/trading';
+import { StockData, ChartData } from '../types/trading';
 import { mockNews } from '../data/mockData';
 import { financialAPI, convertHistoricalDataToChartData } from '../services/api';
 import StockDetailPage from './StockDetailPage';
@@ -69,7 +66,7 @@ const MainContent: React.FC<MainContentProps> = ({
   onShowDetailPage,
   onHideDetailPage
 }) => {
-  const [activeTab, setActiveTab] = useState(0);
+
   const [orderType, setOrderType] = useState<'buy' | 'sell'>('buy');
   const [orderQuantity, setOrderQuantity] = useState('');
   const [chartData, setChartData] = useState<ChartData[]>([]);
@@ -165,12 +162,7 @@ const MainContent: React.FC<MainContentProps> = ({
     }
   };
 
-  const formatChartData = (data: ChartData[]) => {
-    return data.map(item => ({
-      ...item,
-      date: new Date(item.timestamp).toLocaleDateString(),
-    }));
-  };
+
 
   const getSentimentColor = (sentiment: string) => {
     switch (sentiment) {
@@ -221,7 +213,7 @@ const MainContent: React.FC<MainContentProps> = ({
             break;
         }
         
-        const chartData = dates.slice(0, dataPoints).map((date, index) => {
+        const chartData = dates.slice(0, dataPoints).map((date) => {
           const dayData = timeSeriesData[date];
           const closePrice = parseFloat(dayData['4. close']);
           
@@ -342,7 +334,7 @@ const MainContent: React.FC<MainContentProps> = ({
             break;
         }
         
-        const chartData = dates.slice(0, dataPoints).map((date, index) => {
+        const chartData = dates.slice(0, dataPoints).map((date) => {
           const dayData = timeSeriesData[date];
           const closePrice = parseFloat(dayData['4. close']);
           
@@ -444,7 +436,6 @@ const MainContent: React.FC<MainContentProps> = ({
 
     const quantity = parseFloat(orderQuantity);
     const price = selectedStock.price;
-    const totalValue = quantity * price;
 
     const trade: TradeOrder = {
       symbol: selectedStock.symbol,

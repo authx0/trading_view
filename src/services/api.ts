@@ -1,9 +1,9 @@
 import axios from 'axios';
 
-import { API_CONFIG, POPULAR_STOCKS, API_ENDPOINTS } from '../config/api';
+import { API_CONFIG } from '../config/api';
 
 // Alpha Vantage API - Free tier
-const API_KEY = API_CONFIG.ALPHA_VANTAGE_API_KEY;
+
 const BASE_URL = API_CONFIG.BASE_URL;
 
 // For demo purposes, we'll use a demo key that provides limited data

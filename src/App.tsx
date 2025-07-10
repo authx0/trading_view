@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { CssBaseline, Box } from '@mui/material';
 import Header from './components/Header';
@@ -57,13 +57,9 @@ function App() {
   const {
     stocks,
     loading,
-    error,
     searchResults,
     getStockBySymbol,
     searchStocks,
-    getHistoricalData,
-    updateStockPrices,
-    loadInitialStocks,
   } = useStockData();
 
   const handleAddToWatchlist = (stock: StockData) => {

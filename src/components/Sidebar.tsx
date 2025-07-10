@@ -4,14 +4,14 @@ import {
   List,
   ListItem,
   ListItemText,
-  ListItemIcon,
+
   Typography,
   Box,
   Divider,
-  Chip,
+
   Collapse,
   IconButton,
-  CircularProgress,
+
 } from '@mui/material';
 import {
   Bookmark as WatchlistIcon,
@@ -19,10 +19,10 @@ import {
   TrendingUp as MarketIcon,
   ExpandLess,
   ExpandMore,
-  Add as AddIcon,
+
   Remove as RemoveIcon,
 } from '@mui/icons-material';
-import { StockData, WatchlistItem, PortfolioItem, MarketData } from '../types/trading';
+import { StockData } from '../types/trading';
 import { mockPortfolio, mockMarketData } from '../data/mockData';
 
 interface SidebarProps {
@@ -42,7 +42,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   selectedStock, 
   onStockSelect, 
   stocks,
-  loading,
+
   watchlist,
   onRemoveFromWatchlist,
   onShowDetailPage,

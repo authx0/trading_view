@@ -3,10 +3,10 @@ import {
   Box,
   Typography,
   Paper,
-  Grid,
+
   Card,
   CardContent,
-  Divider,
+
   Chip,
   Button,
   IconButton,
@@ -21,21 +21,19 @@ import {
   List,
   ListItem,
   ListItemText,
-  ListItemIcon,
+
 } from '@mui/material';
 import {
   TrendingUp,
   TrendingDown,
-  ShowChart,
-  Timeline,
-  Assessment,
+
   Bookmark,
   BookmarkBorder,
   Share,
   MoreVert,
   ArrowBack,
 } from '@mui/icons-material';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
+import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { StockData, ChartData } from '../types/trading';
 
 interface StockDetailPageProps {
@@ -110,7 +108,7 @@ const StockDetailPage: React.FC<StockDetailPageProps> = ({
               break;
           }
           
-          const chartData: ChartData[] = dates.slice(0, dataPoints).map((date, index) => {
+          const chartData: ChartData[] = dates.slice(0, dataPoints).map((date) => {
             const dayData = timeSeriesData[date];
             const closePrice = parseFloat(dayData['4. close']);
             const openPrice = parseFloat(dayData['1. open']);
@@ -162,7 +160,7 @@ const StockDetailPage: React.FC<StockDetailPageProps> = ({
     loadChartData();
   }, [stock.price, stock.symbol, timeframe]);
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
 
@@ -181,9 +179,7 @@ const StockDetailPage: React.FC<StockDetailPageProps> = ({
     }).format(value);
   };
 
-  const formatNumber = (value: number) => {
-    return new Intl.NumberFormat('en-US').format(value);
-  };
+
 
   const formatVolume = (volume: number) => {
     if (volume >= 1e9) {
