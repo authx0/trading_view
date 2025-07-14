@@ -4,6 +4,7 @@ import { CssBaseline, Box } from '@mui/material';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import MainContent from './components/MainContent';
+import ResponsiveNotification from './components/ResponsiveNotification';
 import { StockData } from './types/trading';
 import { useStockData } from './hooks/useStockData';
 
@@ -75,6 +76,7 @@ function App() {
   return (
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
+      <ResponsiveNotification />
       <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
         <Header 
           onMenuClick={() => setSidebarOpen(!sidebarOpen)}
