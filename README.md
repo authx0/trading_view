@@ -1,15 +1,14 @@
 # Trading View Application
 
-A modern, responsive trading view application built with React, TypeScript, and Material-UI. This application provides a comprehensive trading interface with real-time charts, market data, and portfolio management features.
+A modern, responsive stock market viewing application built with React, TypeScript, and Material-UI. This application provides a comprehensive interface for viewing real-time stock data, charts, and market information.
 
 ## Features
 
 ### 🎯 Core Features
 - **Real-time Stock Charts**: Interactive price charts with area and line chart options
 - **Watchlist Management**: Track your favorite stocks with real-time price updates
-- **Portfolio Tracking**: Monitor your investments with gain/loss calculations
 - **Market Overview**: View major indices and sector performance
-- **Trading Interface**: Buy/sell orders with quantity and price inputs
+- **Stock Analysis**: Comprehensive stock details and financial metrics
 - **News Feed**: Latest financial news with sentiment analysis
 - **Responsive Design**: Works seamlessly on desktop and mobile devices
 
@@ -76,8 +75,7 @@ trading_view/
 │   │   ├── Header.tsx      # Application header
 │   │   ├── Sidebar.tsx     # Navigation sidebar
 │   │   └── MainContent.tsx # Main content area
-│   ├── data/               # Mock data and APIs
-│   │   └── mockData.ts     # Sample trading data
+│   ├── data/               # Data and APIs
 │   ├── types/              # TypeScript type definitions
 │   │   └── trading.ts      # Trading data types
 │   ├── hooks/              # Custom React hooks
@@ -106,11 +104,11 @@ trading_view/
 - Tooltips with detailed price information
 - Responsive design that adapts to screen size
 
-### Trading Interface
-- Buy/Sell order types
-- Quantity and price inputs
-- Real-time order validation
-- Color-coded buttons for buy (green) and sell (red)
+### Stock Analysis
+- Comprehensive stock details and financial metrics
+- Real-time price and volume data
+- Technical indicators and performance metrics
+- Company information and fundamentals
 
 ### Market Data
 - Major indices (S&P 500, NASDAQ, DOW)
@@ -145,31 +143,18 @@ const darkTheme = createTheme({
 ```
 
 ### Adding New Stocks
-To add new stocks to the watchlist, modify the `mockWatchlist` array in `src/data/mockData.ts`:
-
-```typescript
-export const mockWatchlist: WatchlistItem[] = [
-  {
-    symbol: 'AAPL',
-    name: 'Apple Inc.',
-    price: 175.43,
-    change: 2.15,
-    changePercent: 1.24
-  },
-  // Add more stocks here
-];
-```
+To add new stocks to the watchlist, use the search functionality in the application. The app connects to real financial APIs to fetch live stock data.
 
 ## Future Enhancements
 
-- [ ] Real-time data integration with financial APIs
-- [ ] User authentication and account management
+- [ ] Enhanced real-time data integration with multiple financial APIs
+- [ ] User authentication and personalized watchlists
 - [ ] Advanced charting tools (candlestick, technical indicators)
-- [ ] Order history and trade management
+- [ ] Historical data analysis and backtesting tools
 - [ ] Mobile app version
-- [ ] Real-time notifications
-- [ ] Portfolio analytics and reporting
-- [ ] Social trading features
+- [ ] Real-time notifications for price alerts
+- [ ] Advanced analytics and reporting features
+- [ ] Social features for sharing analysis and insights
 
 ## Contributing
 

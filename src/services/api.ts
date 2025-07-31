@@ -6,9 +6,6 @@ import { API_CONFIG } from '../config/api';
 
 const BASE_URL = API_CONFIG.BASE_URL;
 
-// For demo purposes, we'll use a demo key that provides limited data
-// In production, you should get a free API key from Alpha Vantage
-
 export interface AlphaVantageQuote {
   '01. symbol': string;
   '02. open': string;
@@ -82,13 +79,16 @@ export interface AlphaVantageNewsResponse {
 class FinancialAPI {
   private apiKey: string;
 
-  constructor(apiKey: string = 'demo') {
+  constructor(apiKey: string) {
     this.apiKey = apiKey;
   }
 
   // Get real-time quote for a stock
   async getQuote(symbol: string): Promise<AlphaVantageQuote | null> {
     try {
+      validateApiKey();
+      console.log('📡 API: Fetching quote for symbol:', symbol);
+      
       const response = await axios.get(BASE_URL, {
         params: {
           function: 'GLOBAL_QUOTE',
@@ -97,88 +97,34 @@ class FinancialAPI {
         },
       });
 
-      if (response.data['Global Quote']) {
-        return response.data['Global Quote'];
+      console.log('📊 API: Quote response:', response.data);
+
+      // Check for rate limit error
+      if (response.data.Information && response.data.Information.includes('rate limit')) {
+        console.error('🚫 API: Rate limit exceeded for quote:', response.data.Information);
+        throw new Error('Daily API rate limit exceeded (25 requests/day). Please upgrade to premium or wait until tomorrow.');
       }
-      return null;
+
+      if (response.data['Global Quote']) {
+        const quote = response.data['Global Quote'];
+        console.log('✅ API: Quote data received:', quote);
+        return quote;
+      } else {
+        console.log('⚠️ API: No quote data found for:', symbol);
+        return null;
+      }
     } catch (error) {
-      console.error('Error fetching quote:', error);
-      // Fallback to mock data for demo purposes
-      return this.getMockQuote(symbol);
+      console.error(`❌ API: Error fetching quote for ${symbol}:`, error);
+      return null;
     }
-  }
-
-  // Mock quote data for demo purposes
-  private getMockQuote(symbol: string): AlphaVantageQuote | null {
-    const mockQuotes: { [key: string]: AlphaVantageQuote } = {
-      'AAPL': {
-        '01. symbol': 'AAPL',
-        '02. open': '150.00',
-        '03. high': '155.00',
-        '04. low': '149.00',
-        '05. price': '152.50',
-        '06. volume': '50000000',
-        '07. latest trading day': '2024-01-15',
-        '08. previous close': '150.00',
-        '09. change': '2.50',
-        '10. change percent': '1.67',
-      },
-      'MSFT': {
-        '01. symbol': 'MSFT',
-        '02. open': '380.00',
-        '03. high': '385.00',
-        '04. low': '378.00',
-        '05. price': '382.50',
-        '06. volume': '30000000',
-        '07. latest trading day': '2024-01-15',
-        '08. previous close': '380.00',
-        '09. change': '2.50',
-        '10. change percent': '0.66',
-      },
-      'GOOGL': {
-        '01. symbol': 'GOOGL',
-        '02. open': '140.00',
-        '03. high': '142.00',
-        '04. low': '139.00',
-        '05. price': '141.50',
-        '06. volume': '25000000',
-        '07. latest trading day': '2024-01-15',
-        '08. previous close': '140.00',
-        '09. change': '1.50',
-        '10. change percent': '1.07',
-      },
-      'AMZN': {
-        '01. symbol': 'AMZN',
-        '02. open': '150.00',
-        '03. high': '152.00',
-        '04. low': '149.00',
-        '05. price': '151.00',
-        '06. volume': '40000000',
-        '07. latest trading day': '2024-01-15',
-        '08. previous close': '150.00',
-        '09. change': '1.00',
-        '10. change percent': '0.67',
-      },
-      'TSLA': {
-        '01. symbol': 'TSLA',
-        '02. open': '240.00',
-        '03. high': '245.00',
-        '04. low': '238.00',
-        '05. price': '242.50',
-        '06. volume': '60000000',
-        '07. latest trading day': '2024-01-15',
-        '08. previous close': '240.00',
-        '09. change': '2.50',
-        '10. change percent': '1.04',
-      },
-    };
-
-    return mockQuotes[symbol.toUpperCase()] || null;
   }
 
   // Search for stocks
   async searchStocks(query: string): Promise<AlphaVantageSearchResult[]> {
     try {
+      validateApiKey();
+      console.log('🔍 API: Searching for query:', query);
+      
       const response = await axios.get(BASE_URL, {
         params: {
           function: 'SYMBOL_SEARCH',
@@ -187,60 +133,24 @@ class FinancialAPI {
         },
       });
 
+      console.log('📊 API: Search response:', response.data);
+      
+      if (response.data.Information && response.data.Information.includes('rate limit')) {
+        console.error('🚫 API: Rate limit exceeded:', response.data.Information);
+        throw new Error('Daily API rate limit exceeded (25 requests/day). Please upgrade to premium or wait until tomorrow.');
+      }
+
       return response.data.bestMatches || [];
     } catch (error) {
-      console.error('Error searching stocks:', error);
-      // Fallback to mock data for demo purposes
-      return this.getMockSearchResults(query);
+      console.error('❌ API: Error searching stocks:', error);
+      return [];
     }
-  }
-
-  // Mock search results for demo purposes
-  private getMockSearchResults(query: string): AlphaVantageSearchResult[] {
-    const mockStocks = [
-      { symbol: 'AAPL', name: 'Apple Inc.' },
-      { symbol: 'MSFT', name: 'Microsoft Corporation' },
-      { symbol: 'GOOGL', name: 'Alphabet Inc.' },
-      { symbol: 'AMZN', name: 'Amazon.com Inc.' },
-      { symbol: 'TSLA', name: 'Tesla Inc.' },
-      { symbol: 'META', name: 'Meta Platforms Inc.' },
-      { symbol: 'NVDA', name: 'NVIDIA Corporation' },
-      { symbol: 'NFLX', name: 'Netflix Inc.' },
-      { symbol: 'JPM', name: 'JPMorgan Chase & Co.' },
-      { symbol: 'JNJ', name: 'Johnson & Johnson' },
-      { symbol: 'V', name: 'Visa Inc.' },
-      { symbol: 'PG', name: 'Procter & Gamble Co.' },
-      { symbol: 'UNH', name: 'UnitedHealth Group Inc.' },
-      { symbol: 'HD', name: 'Home Depot Inc.' },
-      { symbol: 'MA', name: 'Mastercard Inc.' },
-      { symbol: 'DIS', name: 'Walt Disney Co.' },
-      { symbol: 'PYPL', name: 'PayPal Holdings Inc.' },
-      { symbol: 'ADBE', name: 'Adobe Inc.' },
-      { symbol: 'CRM', name: 'Salesforce Inc.' },
-      { symbol: 'NKE', name: 'Nike Inc.' },
-    ];
-
-    const filteredStocks = mockStocks.filter(stock => 
-      stock.symbol.toLowerCase().includes(query.toLowerCase()) ||
-      stock.name.toLowerCase().includes(query.toLowerCase())
-    );
-
-    return filteredStocks.map(stock => ({
-      '1. symbol': stock.symbol,
-      '2. name': stock.name,
-      '3. type': 'Equity',
-      '4. region': 'United States',
-      '5. marketOpen': '09:30',
-      '6. marketClose': '16:00',
-      '7. timezone': 'UTC-05',
-      '8. currency': 'USD',
-      '9. matchScore': '1.0000',
-    }));
   }
 
   // Get historical data
   async getHistoricalData(symbol: string, outputsize: 'compact' | 'full' = 'compact'): Promise<AlphaVantageTimeSeriesResponse | null> {
     try {
+      validateApiKey();
       const response = await axios.get(BASE_URL, {
         params: {
           function: 'TIME_SERIES_DAILY',
@@ -263,6 +173,7 @@ class FinancialAPI {
   // Get news sentiment
   async getNews(symbol: string): Promise<AlphaVantageNewsResponse | null> {
     try {
+      validateApiKey();
       const response = await axios.get(BASE_URL, {
         params: {
           function: 'NEWS_SENTIMENT',
@@ -284,6 +195,7 @@ class FinancialAPI {
   // Get market overview (top gainers/losers)
   async getMarketOverview(): Promise<any> {
     try {
+      validateApiKey();
       const response = await axios.get(BASE_URL, {
         params: {
           function: 'TOP_GAINERS_LOSERS',
@@ -299,8 +211,27 @@ class FinancialAPI {
   }
 }
 
-// Create API instance
-export const financialAPI = new FinancialAPI();
+// Create API instance with the configured API key
+export const financialAPI = new FinancialAPI(API_CONFIG.ALPHA_VANTAGE_API_KEY || '');
+
+// Validate API key before making requests
+const validateApiKey = () => {
+  if ((import.meta as any).env?.DEV) {
+    console.log('🔑 Validating API key:', {
+      hasApiKey: !!API_CONFIG.ALPHA_VANTAGE_API_KEY,
+      apiKeyLength: API_CONFIG.ALPHA_VANTAGE_API_KEY?.length || 0
+    });
+  }
+  
+  if (!API_CONFIG.ALPHA_VANTAGE_API_KEY) {
+    console.error('❌ API key validation failed: No API key found');
+    throw new Error('API key is not configured. Please add VITE_ALPHA_VANTAGE_API_KEY to your .env file');
+  }
+  
+  if ((import.meta as any).env?.DEV) {
+    console.log('✅ API key validation passed');
+  }
+};
 
 // Helper function to convert Alpha Vantage data to our app's format
 export const convertQuoteToStockData = (quote: AlphaVantageQuote) => {
@@ -309,7 +240,7 @@ export const convertQuoteToStockData = (quote: AlphaVantageQuote) => {
   const change = price - previousClose;
   const changePercent = (change / previousClose) * 100;
 
-  return {
+  const convertedData = {
     symbol: quote['01. symbol'],
     name: quote['01. symbol'], // Alpha Vantage doesn't provide company name in quote
     price,
@@ -321,6 +252,8 @@ export const convertQuoteToStockData = (quote: AlphaVantageQuote) => {
     dividend: 0, // Not provided in quote
     dividendYield: 0, // Not provided in quote
   };
+
+  return convertedData;
 };
 
 // Helper function to convert historical data to chart format

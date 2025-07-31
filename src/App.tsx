@@ -1,12 +1,10 @@
 import { useState } from 'react';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { CssBaseline, Box } from '@mui/material';
-import Header from './components/Header';
-import Sidebar from './components/Sidebar';
 import MainContent from './components/MainContent';
+import HomePage from './components/HomePage';
 import ResponsiveNotification from './components/ResponsiveNotification';
 import { StockData } from './types/trading';
-import { useStockData } from './hooks/useStockData';
 
 const darkTheme = createTheme({
   palette: {
@@ -51,65 +49,43 @@ const darkTheme = createTheme({
 
 function App() {
   const [selectedStock, setSelectedStock] = useState<StockData | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [watchlist, setWatchlist] = useState<StockData[]>([]);
-  const [showDetailPage, setShowDetailPage] = useState(false);
-  
-  const {
-    stocks,
-    loading,
-    searchResults,
-    getStockBySymbol,
-    searchStocks,
-  } = useStockData();
+  const [showHomePage, setShowHomePage] = useState(true);
+  const [apiRateLimitError, setApiRateLimitError] = useState<string | null>(null);
 
-  const handleAddToWatchlist = (stock: StockData) => {
-    if (!watchlist.some(item => item.symbol === stock.symbol)) {
-      setWatchlist(prev => [...prev, stock]);
+  const handleDismissRateLimit = () => {
+    setApiRateLimitError(null);
+  };
+
+  const handleStockSelect = (stock: StockData | null) => {
+    setSelectedStock(stock);
+    if (stock) {
+      setShowHomePage(false);
     }
   };
 
-  const handleRemoveFromWatchlist = (symbol: string) => {
-    setWatchlist(prev => prev.filter(stock => stock.symbol !== symbol));
+  const handleShowHomePage = () => {
+    setShowHomePage(true);
+    setSelectedStock(null);
   };
 
   return (
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
-      <ResponsiveNotification />
-      <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
-        <Header 
-          onMenuClick={() => setSidebarOpen(!sidebarOpen)}
-          selectedStock={selectedStock}
-          onStockSelect={setSelectedStock}
-          searchStocks={searchStocks}
-          searchResults={searchResults}
-          getStockBySymbol={getStockBySymbol}
-          onAddToWatchlist={handleAddToWatchlist}
-          watchlist={watchlist}
-          onShowDetailPage={() => setShowDetailPage(true)}
-        />
-        <Sidebar 
-          open={sidebarOpen}
-          onStockSelect={setSelectedStock}
-          selectedStock={selectedStock}
-          stocks={stocks}
-          loading={loading}
-          watchlist={watchlist}
-          onRemoveFromWatchlist={handleRemoveFromWatchlist}
-          onShowDetailPage={() => setShowDetailPage(true)}
-          getStockBySymbol={getStockBySymbol}
-        />
-        <MainContent 
-          selectedStock={selectedStock}
-          sidebarOpen={sidebarOpen}
-          onAddToWatchlist={handleAddToWatchlist}
-          onRemoveFromWatchlist={handleRemoveFromWatchlist}
-          watchlist={watchlist}
-          showDetailPage={showDetailPage}
-          onShowDetailPage={() => setShowDetailPage(true)}
-          onHideDetailPage={() => setShowDetailPage(false)}
-        />
+      <ResponsiveNotification 
+        apiRateLimitError={apiRateLimitError}
+        onDismissRateLimit={handleDismissRateLimit}
+      />
+      <Box sx={{ height: '100vh', overflow: 'auto' }}>
+        {showHomePage ? (
+          <HomePage
+            onStockSelect={handleStockSelect}
+          />
+        ) : (
+          <MainContent 
+            selectedStock={selectedStock}
+            onShowHomePage={handleShowHomePage}
+          />
+        )}
       </Box>
     </ThemeProvider>
   );

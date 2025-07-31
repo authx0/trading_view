@@ -6,7 +6,7 @@ import {
   convertHistoricalDataToChartData,
   AlphaVantageSearchResult 
 } from '../services/api';
-import { POPULAR_STOCKS } from '../config/api';
+import { POPULAR_STOCKS, API_CONFIG } from '../config/api';
 
 export const useStockData = () => {
   const [stocks, setStocks] = useState<StockData[]>([]);
@@ -23,6 +23,7 @@ export const useStockData = () => {
     setError(null);
     
     try {
+      console.log('🚀 Loading initial stock data...');
       const stockPromises = popularStocks.map(async (symbol) => {
         const quote = await financialAPI.getQuote(symbol);
         if (quote) {
@@ -33,6 +34,7 @@ export const useStockData = () => {
 
       const stockResults = await Promise.all(stockPromises);
       const validStocks = stockResults.filter((stock): stock is StockData => stock !== null);
+      console.log(`✅ Loaded ${validStocks.length} stocks:`, validStocks.map(s => s.symbol));
       setStocks(validStocks);
     } catch (err) {
       setError('Failed to load stock data. Please try again later.');
@@ -89,6 +91,7 @@ export const useStockData = () => {
   // Update stock prices (simulate real-time updates)
   const updateStockPrices = useCallback(async () => {
     try {
+      console.log('🔄 Updating stock prices...');
       const updatedStocks = await Promise.all(
         stocks.map(async (stock) => {
           const quote = await financialAPI.getQuote(stock.symbol);
@@ -98,6 +101,7 @@ export const useStockData = () => {
           return stock;
         })
       );
+      console.log('✅ Updated stock prices:', updatedStocks.map(s => `${s.symbol}: $${s.price}`));
       setStocks(updatedStocks);
     } catch (err) {
       console.error('Error updating stock prices:', err);
@@ -109,10 +113,11 @@ export const useStockData = () => {
     loadInitialStocks();
   }, [loadInitialStocks]);
 
-  // Update prices every 30 seconds (to avoid API rate limits)
+  // Update prices every 2 minutes (to avoid API rate limits)
   useEffect(() => {
     if (stocks.length > 0) {
-      const interval = setInterval(updateStockPrices, 30000);
+      console.log(`⏰ Setting up price updates every ${API_CONFIG.RATE_LIMIT.UPDATE_INTERVAL / 1000} seconds`);
+      const interval = setInterval(updateStockPrices, API_CONFIG.RATE_LIMIT.UPDATE_INTERVAL);
       return () => clearInterval(interval);
     }
   }, [stocks, updateStockPrices]);
@@ -127,5 +132,7 @@ export const useStockData = () => {
     getHistoricalData,
     updateStockPrices,
     loadInitialStocks,
+    // Add manual refresh function
+    refreshStocks: loadInitialStocks,
   };
 }; 
