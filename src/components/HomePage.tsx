@@ -20,39 +20,24 @@ import {
   ListItem,
   ListItemText,
   ListItemSecondaryAction,
-  Divider,
-  Avatar,
   Badge,
   Tabs,
   Tab,
-  LinearProgress,
 } from '@mui/material';
 import {
   TrendingUp,
   TrendingDown,
-  ShowChart,
-  Search,
   Refresh,
   ArrowForward,
   TrendingFlat,
   Notifications,
   Dashboard,
-  Timeline,
   Assessment,
   TrendingUp as TrendingUpIcon,
-  TrendingDown as TrendingDownIcon,
-  Visibility,
-  MoreVert,
-  FilterList,
-  Sort,
-  CalendarToday,
-  AttachMoney,
-  Speed,
-  Security,
   Star,
   StarBorder,
 } from '@mui/icons-material';
-import { StockData, NewsItem, MarketData, WatchlistItem } from '../types/trading';
+import { StockData, NewsItem, WatchlistItem } from '../types/trading';
 import { stockDatabase } from '../services/stockDatabase';
 import { watchlistService } from '../services/watchlistService';
 import { formatCurrency, formatNumberWithCommas, formatVolume, formatMarketCap } from '../utils/formatters';
@@ -73,18 +58,10 @@ const HomePage: React.FC<HomePageProps> = ({
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchResultLoading, setSearchResultLoading] = useState<string | null>(null);
-  const [buttonLoading, setButtonLoading] = useState<string | null>(null);
   
   // New state for enhanced features
   const [activeTab, setActiveTab] = useState(0);
-  const [marketData, setMarketData] = useState<MarketData>({
-    indices: [],
-    sectors: []
-  });
   const [newsFeed, setNewsFeed] = useState<NewsItem[]>([]);
-  const [newsLoading, setNewsLoading] = useState(false);
-
-  const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
@@ -112,7 +89,6 @@ const HomePage: React.FC<HomePageProps> = ({
 
   // Load news feed
   const loadNewsFeed = async () => {
-    setNewsLoading(true);
     try {
       // Mock news data for now - will integrate with real API
       const mockNews: NewsItem[] = [
@@ -147,8 +123,6 @@ const HomePage: React.FC<HomePageProps> = ({
       setNewsFeed(mockNews);
     } catch (err) {
       console.error('Error loading news:', err);
-    } finally {
-      setNewsLoading(false);
     }
   };
 
@@ -206,36 +180,7 @@ const HomePage: React.FC<HomePageProps> = ({
     onStockSelect(stock);
   };
 
-  const handleSearchClick = () => {
-    console.log('🔍 Search button clicked!');
-    setButtonLoading('search');
-    setTimeout(() => {
-      setSearchOpen(true);
-      setButtonLoading(null);
-    }, 100);
-  };
 
-  const handleChartsClick = () => {
-    console.log('📊 Charts button clicked!');
-    setButtonLoading('charts');
-    setTimeout(() => {
-      if (marketOverview.length > 0) {
-        onStockSelect(marketOverview[0]);
-      } else {
-        alert('Loading market data... Please try again in a moment.');
-      }
-      setButtonLoading(null);
-    }, 100);
-  };
-
-  const handleWatchlistClick = () => {
-    console.log('📋 Watchlist button clicked!');
-    setButtonLoading('watchlist');
-    setTimeout(() => {
-      // Removed watchlist functionality
-      setButtonLoading(null);
-    }, 100);
-  };
 
   const handleNotificationClick = () => {
     setNotificationOpen(true);
@@ -306,14 +251,14 @@ const HomePage: React.FC<HomePageProps> = ({
       const quotePromise = stockDatabase.getStockBySymbol(result.symbol);
       const quote = await Promise.race([quotePromise, timeoutPromise]);
       
-      if (quote) {
+      if (quote && typeof quote === 'object' && 'symbol' in quote) {
         // Add to recent searches
         setRecentSearches(prev => {
           const newSearches = [result.symbol, ...prev.filter(s => s !== result.symbol)].slice(0, 5);
           return newSearches;
         });
         
-        onStockSelect(quote);
+        onStockSelect(quote as StockData);
         setSearchOpen(false);
         setSearchQuery('');
         setSearchResults([]);
