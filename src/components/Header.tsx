@@ -13,24 +13,24 @@ import {
   MenuItem,
   List,
   ListItem,
-
+  Tooltip,
   Paper,
   Popper,
   ClickAwayListener,
 } from '@mui/material';
 import {
-  Menu as MenuIcon,
   Search as SearchIcon,
   Notifications as NotificationsIcon,
   AccountCircle as AccountCircleIcon,
   Add as AddIcon,
   Bookmark as BookmarkIcon,
+  Refresh as RefreshIcon,
+  Home as HomeIcon,
 } from '@mui/icons-material';
 import { StockData } from '../types/trading';
 import { AlphaVantageSearchResult } from '../services/api';
 
 interface HeaderProps {
-  onMenuClick: () => void;
   selectedStock: StockData | null;
   onStockSelect: (stock: StockData | null) => void;
   searchStocks: (query: string) => Promise<void>;
@@ -39,10 +39,12 @@ interface HeaderProps {
   onAddToWatchlist: (stock: StockData) => void;
   watchlist: StockData[];
   onShowDetailPage?: () => void;
+  onRefresh?: () => void;
+  loading?: boolean;
+  onShowHomePage?: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({ 
-  onMenuClick, 
   selectedStock, 
   onStockSelect,
   searchStocks,
@@ -50,7 +52,10 @@ const Header: React.FC<HeaderProps> = ({
   getStockBySymbol,
   onAddToWatchlist,
   watchlist,
-  onShowDetailPage
+  onShowDetailPage,
+  onRefresh,
+  loading,
+  onShowHomePage
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -271,41 +276,47 @@ const Header: React.FC<HeaderProps> = ({
         borderBottom: '1px solid #1a1a1a'
       }}
     >
-      <Toolbar sx={{ px: { xs: 1, sm: 2 } }}>
-        <IconButton
-          color="inherit"
-          aria-label="open drawer"
-          edge="start"
-          onClick={onMenuClick}
-          sx={{ mr: { xs: 1, sm: 2 } }}
-        >
-          <MenuIcon />
-        </IconButton>
+      <Toolbar sx={{ 
+        px: { xs: 1, sm: 2 },
+        justifyContent: 'space-between'
+      }}>
         
-        <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, display: { xs: 'none', sm: 'block' } }}>
-          Trading View
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+            Trading View
+          </Typography>
 
-        {selectedStock && (
-          <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', mr: 2 }}>
-            <Typography variant="h6" sx={{ mr: 1 }}>
-              {selectedStock.symbol}
-            </Typography>
-            <Typography 
-              variant="body2" 
-              sx={{ 
-                color: selectedStock.change >= 0 ? '#00d4aa' : '#ff6b6b',
-                fontWeight: 'bold'
-              }}
-            >
-              ${selectedStock.price.toFixed(2)}
-              <span style={{ marginLeft: '8px' }}>
-                {selectedStock.change >= 0 ? '+' : ''}{selectedStock.change.toFixed(2)} 
-                ({selectedStock.changePercent.toFixed(2)}%)
-              </span>
-            </Typography>
-          </Box>
-        )}
+          {onShowHomePage && (
+            <Tooltip title="Go to Home">
+              <IconButton 
+                color="inherit"
+                onClick={onShowHomePage}
+                sx={{ 
+                  '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.1)' }
+                }}
+              >
+                <HomeIcon />
+              </IconButton>
+            </Tooltip>
+          )}
+
+          {selectedStock && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="h6">
+                {selectedStock.symbol}
+              </Typography>
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  color: selectedStock.change >= 0 ? '#00d4aa' : '#ff6b6b',
+                  fontWeight: 'bold'
+                }}
+              >
+                ${selectedStock.price.toFixed(2)} ({selectedStock.change >= 0 ? '+' : ''}{selectedStock.change.toFixed(2)})
+              </Typography>
+            </Box>
+          )}
+        </Box>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Box sx={{ position: 'relative' }}>
@@ -447,6 +458,24 @@ const Header: React.FC<HeaderProps> = ({
               </ClickAwayListener>
             </Popper>
           </Box>
+
+          {onRefresh && (
+            <IconButton 
+              color="inherit" 
+              onClick={onRefresh}
+              disabled={loading}
+              sx={{
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                },
+                '&.Mui-disabled': {
+                  color: '#666',
+                }
+              }}
+            >
+              <RefreshIcon />
+            </IconButton>
+          )}
 
           <IconButton color="inherit">
             <Badge badgeContent={3} color="error">

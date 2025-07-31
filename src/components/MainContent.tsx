@@ -3,16 +3,12 @@ import {
   Box,
   Paper,
   Typography,
-
   Card,
   CardContent,
   Chip,
   Button,
-  TextField,
-  InputAdornment,
   CircularProgress,
-  Alert,
-  Snackbar,
+  IconButton,
 } from '@mui/material';
 import {
   TrendingUp,
@@ -21,6 +17,7 @@ import {
   AttachMoney,
   Assessment,
   Newspaper,
+  ArrowBack,
 } from '@mui/icons-material';
 import {
 
@@ -33,49 +30,26 @@ import {
   Area,
 } from 'recharts';
 import { StockData, ChartData } from '../types/trading';
-import { mockNews } from '../data/mockData';
-import { financialAPI, convertHistoricalDataToChartData } from '../services/api';
-import StockDetailPage from './StockDetailPage';
+import { stockDatabase } from '../services/stockDatabase';
+import { formatCurrency, formatNumberWithCommas, formatVolume, formatMarketCap } from '../utils/formatters';
+
 
 interface MainContentProps {
   selectedStock: StockData | null;
-  sidebarOpen: boolean;
-  onAddToWatchlist: (stock: StockData) => void;
-  onRemoveFromWatchlist: (symbol: string) => void;
-  watchlist: StockData[];
-  showDetailPage: boolean;
-  onShowDetailPage: () => void;
-  onHideDetailPage: () => void;
+  onShowHomePage: () => void;
 }
 
-interface TradeOrder {
-  symbol: string;
-  type: 'buy' | 'sell';
-  quantity: number;
-  price: number;
-  timestamp: Date;
-}
+
 
 const MainContent: React.FC<MainContentProps> = ({ 
   selectedStock, 
-  sidebarOpen, 
-  onAddToWatchlist, 
-  onRemoveFromWatchlist, 
-  watchlist,
-  showDetailPage,
-  onShowDetailPage,
-  onHideDetailPage
+  onShowHomePage
 }) => {
 
-  const [orderType, setOrderType] = useState<'buy' | 'sell'>('buy');
-  const [orderQuantity, setOrderQuantity] = useState('');
   const [chartData, setChartData] = useState<ChartData[]>([]);
   const [chartLoading, setChartLoading] = useState(false);
   const [newsData, setNewsData] = useState<any[]>([]);
   const [newsLoading, setNewsLoading] = useState(false);
-  const [tradeHistory, setTradeHistory] = useState<TradeOrder[]>([]);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
   const [chartPeriod, setChartPeriod] = useState<'1D' | '1W' | '1M' | '1Y'>('1M');
   const [stockChartPeriod, setStockChartPeriod] = useState<'1D' | '1W' | '1M' | '1Y'>('1M');
   const [marketData, setMarketData] = useState<any[]>([]);
@@ -83,22 +57,43 @@ const MainContent: React.FC<MainContentProps> = ({
   const [stockChartData, setStockChartData] = useState<any[]>([]);
   const [stockChartLoading, setStockChartLoading] = useState(false);
 
-  const drawerWidth = 300;
+
 
   // Load chart data when stock is selected
   useEffect(() => {
     if (selectedStock) {
+      console.log('🔄 Loading chart data for stock:', selectedStock.symbol);
       loadChartData(selectedStock.symbol);
       loadNewsData(selectedStock.symbol);
+      // Also load stock chart data
+      const loadStockChartData = async () => {
+        setStockChartLoading(true);
+        try {
+          const data = await generateStockChartData();
+          console.log('📈 Stock chart data loaded:', data.length, 'points');
+          setStockChartData(data);
+        } catch (error) {
+          console.error('Error loading stock chart data:', error);
+          setStockChartData([]); // Set empty array on error
+        } finally {
+          setStockChartLoading(false);
+        }
+      };
+      loadStockChartData();
+    } else {
+      // Clear chart data when no stock is selected
+      setStockChartData([]);
     }
   }, [selectedStock]);
 
   // Load market data when chart period changes
   useEffect(() => {
+    console.log('🔄 Loading market data for period:', chartPeriod);
     const loadMarketData = async () => {
       setMarketDataLoading(true);
       try {
         const data = await generateMarketData();
+        console.log('📈 Market data loaded:', data.length, 'points for period', chartPeriod);
         setMarketData(data);
       } catch (error) {
         console.error('Error loading market data:', error);
@@ -112,15 +107,18 @@ const MainContent: React.FC<MainContentProps> = ({
 
   // Load stock chart data when stock chart period changes
   useEffect(() => {
+    if (!selectedStock) return;
+    
+    console.log('🔄 Reloading stock chart data for period:', stockChartPeriod);
     const loadStockChartData = async () => {
-      if (!selectedStock) return;
-      
       setStockChartLoading(true);
       try {
         const data = await generateStockChartData();
+        console.log('📈 Stock chart data reloaded:', data.length, 'points for period', stockChartPeriod);
         setStockChartData(data);
       } catch (error) {
         console.error('Error loading stock chart data:', error);
+        setStockChartData([]); // Set empty array on error
       } finally {
         setStockChartLoading(false);
       }
@@ -132,10 +130,9 @@ const MainContent: React.FC<MainContentProps> = ({
   const loadChartData = async (symbol: string) => {
     setChartLoading(true);
     try {
-      const data = await financialAPI.getHistoricalData(symbol, 'compact');
+      const data = await stockDatabase.generateHistoricalData(symbol, '1M');
       if (data) {
-        const chartData = convertHistoricalDataToChartData(data);
-        setChartData(chartData);
+        setChartData(data);
       }
     } catch (error) {
       console.error('Error loading chart data:', error);
@@ -148,15 +145,37 @@ const MainContent: React.FC<MainContentProps> = ({
   const loadNewsData = async (symbol: string) => {
     setNewsLoading(true);
     try {
-      const newsResponse = await financialAPI.getNews(symbol);
-      if (newsResponse && newsResponse.feed) {
-        setNewsData(newsResponse.feed.slice(0, 5)); // Limit to 5 news items
-      } else {
-        setNewsData(mockNews); // Fallback to mock data
-      }
+      // Mock news data since we don't have news API
+      const mockNews = [
+        {
+          title: `${symbol} Reports Strong Quarterly Earnings`,
+          summary: `The company exceeded analyst expectations with revenue growth of 15% year-over-year.`,
+          source: 'Financial Times',
+          time_published: new Date().toISOString(),
+          url: '#',
+          overall_sentiment_label: 'positive'
+        },
+        {
+          title: `Analysts Upgrade ${symbol} Price Target`,
+          summary: `Multiple investment firms have raised their price targets following recent performance.`,
+          source: 'Reuters',
+          time_published: new Date(Date.now() - 3600000).toISOString(),
+          url: '#',
+          overall_sentiment_label: 'positive'
+        },
+        {
+          title: `${symbol} Announces New Product Launch`,
+          summary: `The company is set to release innovative products in the coming quarter.`,
+          source: 'Bloomberg',
+          time_published: new Date(Date.now() - 7200000).toISOString(),
+          url: '#',
+          overall_sentiment_label: 'neutral'
+        }
+      ];
+      setNewsData(mockNews);
     } catch (error) {
       console.error('Error loading news data:', error);
-      setNewsData(mockNews); // Fallback to mock data
+      setNewsData([]);
     } finally {
       setNewsLoading(false);
     }
@@ -237,13 +256,16 @@ const MainContent: React.FC<MainContentProps> = ({
           };
         });
         
+        console.log('📊 Market API data received:', chartData.length, 'data points');
         return chartData;
       }
     } catch (error) {
       console.error('Error fetching market data:', error);
+      console.log('🔄 Falling back to mock market data due to API error');
     }
     
     // Fallback to mock data if API fails
+    console.log('🎲 Generating mock market data');
     const data = [];
     const baseValue = 4780;
     const today = new Date();
@@ -303,69 +325,16 @@ const MainContent: React.FC<MainContentProps> = ({
       });
     }
     
+    console.log('✅ Mock market data generated:', data.length, 'data points');
     return data;
   };
 
   const generateStockChartData = async () => {
     if (!selectedStock) return [];
     
-    try {
-      // Fetch real stock data using Alpha Vantage API
-      const response = await fetch(`https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${selectedStock.symbol}&apikey=demo&outputsize=compact`);
-      const data = await response.json();
-      
-      if (data['Time Series (Daily)']) {
-        const timeSeriesData = data['Time Series (Daily)'];
-        const dates = Object.keys(timeSeriesData).sort().reverse();
-        
-        let dataPoints = 30; // Default for 1M
-        switch (stockChartPeriod) {
-          case '1D':
-            dataPoints = 24;
-            break;
-          case '1W':
-            dataPoints = 7;
-            break;
-          case '1M':
-            dataPoints = 30;
-            break;
-          case '1Y':
-            dataPoints = 52;
-            break;
-        }
-        
-        const chartData = dates.slice(0, dataPoints).map((date) => {
-          const dayData = timeSeriesData[date];
-          const closePrice = parseFloat(dayData['4. close']);
-          
-          // Format date based on period
-          let dateLabel = '';
-          const dateObj = new Date(date);
-          
-          if (stockChartPeriod === '1D') {
-            dateLabel = dateObj.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-          } else if (stockChartPeriod === '1W') {
-            dateLabel = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
-          } else if (stockChartPeriod === '1Y') {
-            dateLabel = dateObj.toLocaleDateString('en-US', { month: 'short' });
-          } else {
-            dateLabel = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-          }
-          
-          return {
-            date: dateLabel,
-            close: closePrice
-          };
-        });
-        
-        return chartData;
-      }
-    } catch (error) {
-      console.error('Error fetching stock data:', error);
-    }
-    
-    // Fallback to mock data if API fails
-    const data = [];
+    // For debugging, let's always generate mock data first
+    console.log('🎲 Generating mock chart data for:', selectedStock.symbol);
+    const mockData = [];
     const baseValue = selectedStock.price;
     const today = new Date();
     
@@ -418,67 +387,43 @@ const MainContent: React.FC<MainContentProps> = ({
         dateLabel = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       }
       
-      data.push({
+      mockData.push({
         date: dateLabel,
         close: Math.max(baseValue * 0.8, Math.min(baseValue * 1.2, value)) // Keep within reasonable bounds
       });
     }
     
-    return data;
-  };
-
-  const handleTrade = () => {
-    if (!selectedStock || !orderQuantity || parseFloat(orderQuantity) <= 0) {
-      setSuccessMessage('Please enter a valid quantity');
-      setShowSuccess(true);
-      return;
-    }
-
-    const quantity = parseFloat(orderQuantity);
-    const price = selectedStock.price;
-
-    const trade: TradeOrder = {
-      symbol: selectedStock.symbol,
-      type: orderType,
-      quantity,
-      price,
-      timestamp: new Date(),
-    };
-
-    setTradeHistory(prev => [trade, ...prev]);
-    setOrderQuantity('');
+    console.log('✅ Mock data generated:', mockData.length, 'data points');
     
-    const action = orderType === 'buy' ? 'bought' : 'sold';
-    setSuccessMessage(`Successfully ${action} ${quantity} shares of ${selectedStock.symbol} at $${price.toFixed(2)}`);
-    setShowSuccess(true);
+    // Ensure we always return some data
+    if (mockData.length === 0) {
+      console.warn('⚠️ No data generated, creating fallback data');
+      return [
+        { date: 'Today', close: baseValue },
+        { date: 'Yesterday', close: baseValue * 0.98 },
+        { date: '2 days ago', close: baseValue * 1.02 }
+      ];
+    }
+    
+    return mockData;
   };
 
-  const handleCloseSuccess = () => {
-    setShowSuccess(false);
-  };
+
+
+
+
+
 
   return (
     <Box
       component="main"
       sx={{
-        flexGrow: 1,
-        marginLeft: sidebarOpen ? `${drawerWidth}px` : 0,
-        marginTop: '64px',
-        height: 'calc(100vh - 64px)',
+        height: '100vh',
         overflow: 'auto',
         backgroundColor: '#000000', // True OLED black
-        transition: 'margin-left 0.3s ease',
       }}
     >
-      {selectedStock && showDetailPage ? (
-        <StockDetailPage
-          stock={selectedStock}
-          onBack={onHideDetailPage}
-          onAddToWatchlist={onAddToWatchlist}
-          isInWatchlist={watchlist.some(stock => stock.symbol === selectedStock.symbol)}
-          onRemoveFromWatchlist={onRemoveFromWatchlist}
-        />
-      ) : selectedStock ? (
+      {selectedStock ? (
         <Box sx={{ p: { xs: 2, sm: 3 } }}>
           {/* Stock Header */}
           <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 3, backgroundColor: '#0a0a0a' }}>
@@ -488,20 +433,31 @@ const MainContent: React.FC<MainContentProps> = ({
               alignItems: { xs: 'flex-start', md: 'center' },
               gap: 2
             }}>
-              <Box sx={{ flex: '1' }}>
-                <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
-                  {selectedStock.symbol}
-                </Typography>
-                <Typography variant="body1" color="text.secondary">
-                  {selectedStock.name}
-                </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: { xs: 2, md: 0 } }}>
+                <IconButton
+                  onClick={onShowHomePage}
+                  sx={{ 
+                    color: '#00d4aa',
+                    '&:hover': { backgroundColor: 'rgba(0, 212, 170, 0.1)' }
+                  }}
+                >
+                  <ArrowBack />
+                </IconButton>
+                <Box>
+                  <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
+                    {selectedStock.symbol}
+                  </Typography>
+                  <Typography variant="body1" color="text.secondary">
+                    {selectedStock.name}
+                  </Typography>
+                </Box>
               </Box>
               <Box sx={{ 
                 textAlign: { xs: 'left', md: 'right' },
                 width: { xs: '100%', md: 'auto' }
               }}>
                 <Typography variant="h3" sx={{ fontWeight: 'bold', mb: 1 }}>
-                  ${selectedStock.price.toFixed(2)}
+                  {formatCurrency(selectedStock.price)}
                 </Typography>
                 <Box sx={{ 
                   display: 'flex', 
@@ -521,24 +477,10 @@ const MainContent: React.FC<MainContentProps> = ({
                       fontWeight: 'bold',
                     }}
                   >
-                    {selectedStock.change >= 0 ? '+' : ''}{selectedStock.change.toFixed(2)} ({selectedStock.changePercent.toFixed(2)}%)
+                    {selectedStock.change >= 0 ? '+' : ''}{formatCurrency(selectedStock.change)} ({formatNumberWithCommas(selectedStock.changePercent, 2)}%)
                   </Typography>
                 </Box>
-                <Button
-                  variant="outlined"
-                  onClick={onShowDetailPage}
-                  sx={{
-                    mt: 1,
-                    color: '#00d4aa',
-                    borderColor: '#00d4aa',
-                    '&:hover': {
-                      borderColor: '#00d4aa',
-                      backgroundColor: '#00d4aa20',
-                    },
-                  }}
-                >
-                  View Full Details
-                </Button>
+
               </Box>
             </Box>
           </Paper>
@@ -575,13 +517,26 @@ const MainContent: React.FC<MainContentProps> = ({
                     ))}
                   </Box>
                 </Box>
+                {/* Stock Database Notice */}
+                <Box sx={{ mb: 2, p: 1, bgcolor: '#1a1a1a', borderRadius: 1, border: '1px solid #00d4aa' }}>
+                  <Typography variant="caption" sx={{ color: '#00d4aa', display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <span>📊</span>
+                    Using US Stock Symbols database. Data updated nightly. Charts show simulated historical data.
+                  </Typography>
+                </Box>
                 {chartLoading || stockChartLoading ? (
                   <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 320 }}>
                     <CircularProgress sx={{ color: '#00d4aa' }} />
                   </Box>
-                ) : stockChartData.length > 0 ? (
+                ) : (
                   <ResponsiveContainer width="100%" height={280}>
-                    <AreaChart data={stockChartData}>
+                    <AreaChart data={stockChartData.length > 0 ? stockChartData : [
+                      { date: 'Jan 1', close: 100 },
+                      { date: 'Jan 2', close: 105 },
+                      { date: 'Jan 3', close: 102 },
+                      { date: 'Jan 4', close: 108 },
+                      { date: 'Jan 5', close: 110 }
+                    ]}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
                       <XAxis 
                         dataKey="date" 
@@ -596,7 +551,7 @@ const MainContent: React.FC<MainContentProps> = ({
                         fontSize={12}
                         tickLine={false}
                         axisLine={false}
-                        tickFormatter={(value) => `$${value.toFixed(2)}`}
+                        tickFormatter={(value) => formatCurrency(value)}
                         domain={['dataMin - 5', 'dataMax + 5']}
                       />
                       <Tooltip
@@ -606,7 +561,7 @@ const MainContent: React.FC<MainContentProps> = ({
                           color: '#ffffff',
                           borderRadius: '8px',
                         }}
-                        formatter={(value: any) => [`$${value.toFixed(2)}`, 'Price']}
+                        formatter={(value: any) => [formatCurrency(value), 'Price']}
                         labelFormatter={(label) => `Date: ${label}`}
                       />
                       <Area
@@ -621,123 +576,11 @@ const MainContent: React.FC<MainContentProps> = ({
                       />
                     </AreaChart>
                   </ResponsiveContainer>
-                ) : (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 320 }}>
-                    <Typography color="text.secondary">No chart data available</Typography>
-                  </Box>
                 )}
               </Paper>
             </Box>
 
-            {/* Trading Panel - Working functionality */}
-            <Box sx={{ flex: '1 1 350px', minWidth: 0 }}>
-              <Paper sx={{ p: { xs: 2, sm: 3 }, backgroundColor: '#0a0a0a', height: { xs: 'auto', sm: 400 } }}>
-                <Typography variant="h6" sx={{ mb: 2 }}>
-                  Trade
-                </Typography>
-                
-                <Box sx={{ mb: 2 }}>
-                  <Box sx={{ display: 'flex', mb: 2, gap: 1 }}>
-                    <Button
-                      variant={orderType === 'buy' ? 'contained' : 'outlined'}
-                      onClick={() => setOrderType('buy')}
-                      sx={{
-                        flex: 1,
-                        backgroundColor: orderType === 'buy' ? '#00d4aa' : 'transparent',
-                        color: orderType === 'buy' ? '#000' : '#00d4aa',
-                        '&:hover': {
-                          backgroundColor: orderType === 'buy' ? '#00d4aa' : '#00d4aa20',
-                        },
-                      }}
-                    >
-                      Buy
-                    </Button>
-                    <Button
-                      variant={orderType === 'sell' ? 'contained' : 'outlined'}
-                      onClick={() => setOrderType('sell')}
-                      sx={{
-                        flex: 1,
-                        backgroundColor: orderType === 'sell' ? '#ff6b6b' : 'transparent',
-                        color: orderType === 'sell' ? '#000' : '#ff6b6b',
-                        '&:hover': {
-                          backgroundColor: orderType === 'sell' ? '#ff6b6b' : '#ff6b6b20',
-                        },
-                      }}
-                    >
-                      Sell
-                    </Button>
-                  </Box>
 
-                  <TextField
-                    fullWidth
-                    label="Quantity"
-                    type="number"
-                    value={orderQuantity}
-                    onChange={(e) => setOrderQuantity(e.target.value)}
-                    sx={{ mb: 2 }}
-                    InputProps={{
-                      endAdornment: <InputAdornment position="end">shares</InputAdornment>,
-                    }}
-                  />
-
-                  <Box sx={{ mb: 2, p: 2, bgcolor: '#0a0a0a', borderRadius: 1, border: '1px solid #1a1a1a' }}>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                      Current Price: ${selectedStock.price.toFixed(2)}
-                    </Typography>
-                    {orderQuantity && parseFloat(orderQuantity) > 0 && (
-                      <Typography variant="body2" color="text.secondary">
-                        Total Value: ${(parseFloat(orderQuantity) * selectedStock.price).toFixed(2)}
-                      </Typography>
-                    )}
-                  </Box>
-
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    onClick={handleTrade}
-                    disabled={!orderQuantity || parseFloat(orderQuantity) <= 0}
-                    sx={{
-                      backgroundColor: orderType === 'buy' ? '#00d4aa' : '#ff6b6b',
-                      color: '#000',
-                      '&:hover': {
-                        backgroundColor: orderType === 'buy' ? '#00d4aa' : '#ff6b6b',
-                        opacity: 0.8,
-                      },
-                      '&:disabled': {
-                        backgroundColor: '#666',
-                        color: '#999',
-                      },
-                    }}
-                  >
-                    {orderType === 'buy' ? 'Buy' : 'Sell'} {selectedStock.symbol}
-                  </Button>
-                </Box>
-
-                {/* Trade History */}
-                {tradeHistory.length > 0 && (
-                  <Box sx={{ mt: 2 }}>
-                    <Typography variant="subtitle2" sx={{ mb: 1, color: '#b0b0b0' }}>
-                      Recent Trades
-                    </Typography>
-                    <Box sx={{ maxHeight: 150, overflow: 'auto' }}>
-                      {tradeHistory.slice(0, 3).map((trade, index) => (
-                        <Box key={index} sx={{ mb: 1, p: 1, bgcolor: '#0a0a0a', borderRadius: 1, border: '1px solid #1a1a1a' }}>
-                          <Typography variant="caption" sx={{ color: trade.type === 'buy' ? '#00d4aa' : '#ff6b6b' }}>
-                            {trade.type.toUpperCase()}
-                          </Typography>
-                          <Typography variant="caption" sx={{ display: 'block', color: '#b0b0b0' }}>
-                            {trade.quantity} shares @ ${trade.price.toFixed(2)}
-                          </Typography>
-                          <Typography variant="caption" sx={{ color: '#666' }}>
-                            {trade.timestamp.toLocaleTimeString()}
-                          </Typography>
-                        </Box>
-                      ))}
-                    </Box>
-                  </Box>
-                )}
-              </Paper>
-            </Box>
 
             {/* Stock Details - Enhanced with comprehensive information */}
             <Box sx={{ 
@@ -761,7 +604,7 @@ const MainContent: React.FC<MainContentProps> = ({
                     <Box>
                       <Typography variant="caption" color="text.secondary">Current Price</Typography>
                       <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                        ${selectedStock.price.toFixed(2)}
+                        {formatCurrency(selectedStock.price)}
                       </Typography>
                     </Box>
                     <Box>
@@ -773,7 +616,7 @@ const MainContent: React.FC<MainContentProps> = ({
                           color: selectedStock.change >= 0 ? '#00d4aa' : '#ff6b6b'
                         }}
                       >
-                        {selectedStock.change >= 0 ? '+' : ''}{selectedStock.change.toFixed(2)}
+                        {selectedStock.change >= 0 ? '+' : ''}{formatCurrency(selectedStock.change)}
                       </Typography>
                     </Box>
                     <Box>
@@ -785,13 +628,13 @@ const MainContent: React.FC<MainContentProps> = ({
                           color: selectedStock.change >= 0 ? '#00d4aa' : '#ff6b6b'
                         }}
                       >
-                        {selectedStock.change >= 0 ? '+' : ''}{selectedStock.changePercent.toFixed(2)}%
+                        {selectedStock.change >= 0 ? '+' : ''}{formatNumberWithCommas(selectedStock.changePercent, 2)}%
                       </Typography>
                     </Box>
                     <Box>
                       <Typography variant="caption" color="text.secondary">Volume</Typography>
                       <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                        {selectedStock.volume.toLocaleString()}
+                        {formatVolume(selectedStock.volume)}
                       </Typography>
                     </Box>
                   </Box>
@@ -815,7 +658,7 @@ const MainContent: React.FC<MainContentProps> = ({
                         </Typography>
                       </Box>
                       <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                        ${(selectedStock.marketCap / 1e9).toFixed(2)}B
+                        {formatMarketCap(selectedStock.marketCap)}
                       </Typography>
                     </Box>
                     <Box>
@@ -826,7 +669,7 @@ const MainContent: React.FC<MainContentProps> = ({
                         </Typography>
                       </Box>
                       <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                        {selectedStock.pe.toFixed(2)}
+                        {formatNumberWithCommas(selectedStock.pe, 2)}
                       </Typography>
                     </Box>
                     <Box>
@@ -837,7 +680,7 @@ const MainContent: React.FC<MainContentProps> = ({
                         </Typography>
                       </Box>
                       <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                        {selectedStock.dividendYield.toFixed(2)}%
+                        {formatNumberWithCommas(selectedStock.dividendYield, 2)}%
                       </Typography>
                     </Box>
                     <Box>
@@ -848,7 +691,7 @@ const MainContent: React.FC<MainContentProps> = ({
                         </Typography>
                       </Box>
                       <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                        {(selectedStock.volume * 0.8).toLocaleString()}
+                        {formatVolume(selectedStock.volume * 0.8)}
                       </Typography>
                     </Box>
                   </Box>
@@ -1013,6 +856,13 @@ const MainContent: React.FC<MainContentProps> = ({
                       </Button>
                     ))}
                   </Box>
+                </Box>
+                {/* Stock Database Notice */}
+                <Box sx={{ mb: 2, p: 1, bgcolor: '#1a1a1a', borderRadius: 1, border: '1px solid #00d4aa' }}>
+                  <Typography variant="caption" sx={{ color: '#00d4aa', display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <span>📊</span>
+                    Using US Stock Symbols database. Data updated nightly. Charts show simulated historical data.
+                  </Typography>
                 </Box>
                 {marketDataLoading ? (
                   <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 320 }}>
@@ -1240,21 +1090,7 @@ const MainContent: React.FC<MainContentProps> = ({
         </Box>
       )}
 
-      {/* Success Snackbar */}
-      <Snackbar
-        open={showSuccess}
-        autoHideDuration={4000}
-        onClose={handleCloseSuccess}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert 
-          onClose={handleCloseSuccess} 
-          severity="success" 
-          sx={{ width: '100%' }}
-        >
-          {successMessage}
-        </Alert>
-      </Snackbar>
+
     </Box>
   );
 };
